@@ -354,7 +354,7 @@ const compress = (img: Block): Transformation[][] => {
   return transformations;
 };
 
-const ITERATIONS = 5;
+const ITERATIONS = 1;
 
 const createRandomBlock = (size: number): Block => {
   const block = createEmptyBlock(size);
@@ -368,7 +368,7 @@ const createRandomBlock = (size: number): Block => {
 
 const decompress = (transformations: Transformation[][]): Block => {
   const size = transformations.length * DOMAIN_BLOCK_SIZE;
-  const currentImg = createRandomBlock(size);
+  const currentImg = createEmptyBlock(size);
 
   for (let i = 0; i < ITERATIONS; i++) {
     console.log("iteration", i);
