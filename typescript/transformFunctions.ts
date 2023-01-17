@@ -1,15 +1,22 @@
-import { Block, Coordinates, Image, TransformFn, Variant } from "./domain";
+import {
+  Block,
+  Coordinates,
+  Image,
+  TransformFn,
+  TransformFunction,
+  Variant,
+} from "./domain";
 
 // reduces the 8 x 8 block to a 4 x 4 block
 export const reduceSize = (block: Block, factor: number): Block => {
-  const newBlockSize = 4;
-  const newBlock = new Array(4);
-  for (let i = 0; i < newBlock.length; i++) {
-    newBlock[i] = new Array(4);
+  const newBlockSize = block.size / factor;
+  const newBlock = new Array(newBlockSize);
+  for (let i = 0; i < newBlockSize; i++) {
+    newBlock[i] = new Array(newBlockSize);
   }
 
-  for (let i = 0; i < newBlock.length; i++) {
-    for (let j = 0; j < newBlock.length; j++) {
+  for (let i = 0; i < newBlockSize; i++) {
+    for (let j = 0; j < newBlockSize; j++) {
       let mean = 0;
 
       for (let k = i * factor; k < (i + 1) * factor; k++) {
@@ -103,7 +110,10 @@ export const mergeBlocks = (blocks: Block[][], blockSize: number): Block => {
   };
 };
 
-const createEmptyBlock = (size: number, coordinates: Coordinates): Block => {
+export const createEmptyBlock = (
+  size: number,
+  coordinates: Coordinates
+): Block => {
   const block = new Array(size);
   for (let i = 0; i < size; i++) {
     block[i] = new Array(size);
@@ -213,4 +223,26 @@ export const generateAllVariants = (rangeBlock: Block): Variant[] => {
       block: rotate270(resized),
     },
   ];
+};
+
+export const applyTransform = (
+  transformType: TransformFunction,
+  rangeBlock: Block
+): Block => {
+  const resized = reduceSize(rangeBlock, 2);
+  switch (transformType.type) {
+    case "identity":
+      return identity(resized);
+    case "flip":
+      return transformType.flipAxis === "x" ? flipX(resized) : flipY(resized);
+    case "rotate":
+      switch (transformType.angle) {
+        case 90:
+          return rotate90(resized);
+        case 180:
+          return rotate180(resized);
+        case 270:
+          return rotate270(resized);
+      }
+  }
 };

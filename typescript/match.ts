@@ -30,7 +30,7 @@ export const findBestMatchForDomainBlock = (
   return bestMatch;
 };
 
-const CONTRAST = 0.75 * 256;
+export const CONTRAST = 0.75 * 256;
 
 function calculateDifference(
   domainBlock: Block,
