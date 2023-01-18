@@ -1,5 +1,5 @@
 import { adjust, getContrastAndBrightness } from "./adjust";
-import { clone, createEmptyBlock } from "./block";
+import { cloneBlock, createEmptyBlock } from "./block";
 import { DOMAIN_BLOCK_SIZE, RANGE_BLOCK_SIZE } from "./constants";
 import { applyTransformation, reduceSize } from "./transformations";
 import { Block, Variant, VariantWithContrastAndBrightness } from "./types";
@@ -22,13 +22,11 @@ export const generateAllVariants = (img: Block): Variant[] => {
       // apply all possible affine transformations
       for (let flipType of ["horizontal", "vertical"] as const) {
         for (let rotateAngle of [0, 90, 180, 270] as const) {
-          // console.log("before", rangeBlock.data);
           const variant = applyTransformation(
             rangeBlock,
             flipType,
             rotateAngle
           );
-          // console.log("after", variant.data);
 
           variants.push({
             x: k,
@@ -42,7 +40,6 @@ export const generateAllVariants = (img: Block): Variant[] => {
     }
   }
 
-  console.log(variants.slice(0, 10).map((v) => v.transformedBlock.data));
   return variants;
 };
 
@@ -58,23 +55,13 @@ export const findBestTransformation = (
   let bestMSE = Infinity;
 
   for (const variant of variants) {
-    let variantBlockClone = clone(variant.transformedBlock);
-    // console.log({
-    //   variantBlockClone: variantBlockClone.data.toString(),
-    //   variant: variant.transformedBlock.data.toString(),
-    // });
+    let variantBlockClone = cloneBlock(variant.transformedBlock);
     const { contrast, brightness } = getContrastAndBrightness(
       domainBlock,
       variantBlockClone
     );
 
     adjust(variantBlockClone, contrast, brightness);
-
-    // // add contrast
-    // mapBlock(variantBlockClone, (pixel) => pixel * contrast);
-
-    // // add brightness
-    // mapBlock(variantBlockClone, (pixel) => pixel + brightness);
 
     let mse = 0;
     for (let x = 0; x < DOMAIN_BLOCK_SIZE; x++) {

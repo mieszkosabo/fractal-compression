@@ -1,24 +1,13 @@
 import { Block } from "./types";
 
-export const createEmptyBlock = (size: number): Block => {
-  const data = new Array(size);
-  for (let i = 0; i < size; i++) {
-    data[i] = new Array(size).fill(0);
-  }
-
-  return {
-    data,
-    size,
-  };
-};
-
-export const clone = (block: Block): Block => {
+export const cloneBlock = (block: Block): Block => {
   const newBlock = createEmptyBlock(block.size);
   for (let x = 0; x < block.size; x++) {
     for (let y = 0; y < block.size; y++) {
       newBlock.data[x][y] = block.data[x][y];
     }
   }
+
   return newBlock;
 };
 
@@ -34,7 +23,20 @@ export const extractBlock = (
       newBlock.data[i][j] = block.data[x + i][y + j];
     }
   }
+
   return newBlock;
+};
+
+export const createEmptyBlock = (size: number): Block => {
+  const data = new Array(size);
+  for (let i = 0; i < size; i++) {
+    data[i] = new Array(size).fill(0);
+  }
+
+  return {
+    data,
+    size,
+  };
 };
 
 export const createRandomBlock = (size: number): Block => {
@@ -44,5 +46,6 @@ export const createRandomBlock = (size: number): Block => {
       block.data[x][y] = Math.random();
     }
   }
+
   return block;
 };

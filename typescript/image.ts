@@ -95,8 +95,8 @@ export const saveBlockToImage = async (
   path: string,
   block: Block
 ): Promise<void> => {
+  // we operate on values from 0 to 1 in this implementation, but sharp operates on values from 0 to 255
   const buffer = Buffer.from(block.data.flat().map((value) => value * 255));
-  console.log(buffer);
   await sharp(buffer, {
     raw: {
       width: block.size,

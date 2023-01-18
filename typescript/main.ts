@@ -32,7 +32,6 @@ import { getGrayscaleImage, saveBlockToImage } from "./image";
 (async () => {
   console.info("Loading image...");
   let block = await getGrayscaleImage("../assets/monkey.gif");
-  console.log("size", block.size);
 
   console.info("Compressing image...");
   const transformations = compress(block);
