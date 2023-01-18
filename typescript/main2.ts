@@ -11,7 +11,7 @@ function bufferToMatrix(array: Buffer, width: number): number[][] {
   for (let i = 0; i < array.length; i++) {
     const x = i % width;
     const y = Math.floor(i / width);
-    matrix.data[y][x] = array[i];
+    matrix.data[y][x] = array[i] / 255;
   }
 
   return matrix.data;
@@ -32,8 +32,71 @@ const getGrayscaleImage = async (path: string): Promise<Block> => {
   };
 };
 
+function bufferToRGB(buffer: Buffer): {
+  r: Uint8Array;
+  g: Uint8Array;
+  b: Uint8Array;
+} {
+  const r = new Uint8Array(buffer.length / 3);
+  const g = new Uint8Array(buffer.length / 3);
+  const b = new Uint8Array(buffer.length / 3);
+
+  for (let i = 0; i < buffer.length; i += 3) {
+    r[i / 3] = buffer[i];
+    g[i / 3] = buffer[i + 1];
+    b[i / 3] = buffer[i + 2];
+  }
+
+  return { r, g, b };
+}
+
+const getRGBImage = async (
+  path: string
+): Promise<{ r: Block; g: Block; b: Block }> => {
+  const image = await sharp(path)
+    .raw()
+    .resize(256, 256)
+    .toBuffer({ resolveWithObject: true });
+
+  const { r, g, b } = bufferToRGB(image.data);
+  const rMatrix = bufferToMatrix(Buffer.from(r), image.info.width);
+  const gMatrix = bufferToMatrix(Buffer.from(g), image.info.width);
+  const bMatrix = bufferToMatrix(Buffer.from(b), image.info.width);
+
+  return {
+    r: { data: rMatrix, size: image.info.width },
+    g: { data: gMatrix, size: image.info.width },
+    b: { data: bMatrix, size: image.info.width },
+  };
+};
+
+const saveRGBBlocksToImage = async (
+  path: string,
+  r: Block,
+  g: Block,
+  b: Block
+): Promise<void> => {
+  const buffer = Buffer.alloc(r.size * r.size * 3);
+  for (let i = 0; i < r.size; i++) {
+    for (let j = 0; j < r.size; j++) {
+      buffer[i * r.size * 3 + j * 3] = r.data[i][j];
+      buffer[i * r.size * 3 + j * 3 + 1] = g.data[i][j];
+      buffer[i * r.size * 3 + j * 3 + 2] = b.data[i][j];
+    }
+  }
+
+  await sharp(buffer, {
+    raw: {
+      width: r.size,
+      height: r.size,
+      channels: 3,
+    },
+  }).toFile(path);
+};
+
 const saveBlockToImage = async (path: string, block: Block): Promise<void> => {
-  const buffer = Buffer.from(block.data.flat());
+  const buffer = Buffer.from(block.data.flat().map((value) => value * 255));
+  console.log(buffer);
   await sharp(buffer, {
     raw: {
       width: block.size,
@@ -134,7 +197,7 @@ const mapBlock = (block: Block, fn: (pixel: number) => number) => {
 function adjust(block: Block, contrast: number, brightness: number) {
   for (let x = 0; x < block.size; x++) {
     for (let y = 0; y < block.size; y++) {
-      block.data[x][y] = ((contrast * block.data[x][y]) >> 8) + brightness;
+      block.data[x][y] = Math.min(1, contrast * block.data[x][y] + brightness);
     }
   }
 }
@@ -148,11 +211,9 @@ const applyTransformation = (
 ): Block => {
   // apply affine transformations
   const newBlock = rotate(flip(block, flipType), rotateAngle);
-  // console.log("rotate + flip", newBlock.data);
-  // add contrast
-  adjust(newBlock, contrast, brightness);
 
-  // console.log("brightness", newBlock.data);
+  // adjust contrast and brightness
+  adjust(newBlock, contrast, brightness);
 
   return newBlock;
 };
@@ -174,11 +235,14 @@ const getContrastAndBrightness = (
       //   range: rangeBlock.data[x][y],
       // });
       brightness +=
-        domainBlock.data[x][y] - (contrast * rangeBlock.data[x][y]) / 256;
+        domainBlock.data[x][y] -
+        (contrast * rangeBlock.data[x][y]) /
+          (domainBlock.size * domainBlock.size);
     }
   }
 
-  brightness = Math.round(brightness / (domainBlock.size * domainBlock.size));
+  // console.log(brightness);
+  brightness = brightness / (domainBlock.size * domainBlock.size);
 
   // console.log("brightness", brightness);
   return {
@@ -218,11 +282,13 @@ const generateAllVariants = (img: Block): Variant[] => {
       // apply all possible affine transformations
       for (let flipType of ["horizontal", "vertical"] as const) {
         for (let rotateAngle of [0, 90, 180, 270] as const) {
+          // console.log("before", rangeBlock.data);
           const variant = applyTransformation(
             rangeBlock,
             flipType,
             rotateAngle
           );
+          // console.log("after", variant.data);
 
           variants.push({
             x: k,
@@ -236,6 +302,7 @@ const generateAllVariants = (img: Block): Variant[] => {
     }
   }
 
+  console.log(variants.slice(0, 10).map((v) => v.transformedBlock.data));
   return variants;
 };
 
@@ -260,19 +327,23 @@ const findBestTransformation = (
 ): VariantWithContrastAndBrightness => {
   let bestVariant: VariantWithContrastAndBrightness = {
     ...variants[0],
-    contrast: 0,
+    contrast: 1,
     brightness: 0,
   };
   let bestMSE = Infinity;
 
   for (const variant of variants) {
     let variantBlockClone = clone(variant.transformedBlock);
+    // console.log({
+    //   variantBlockClone: variantBlockClone.data.toString(),
+    //   variant: variant.transformedBlock.data.toString(),
+    // });
     const { contrast, brightness } = getContrastAndBrightness(
       domainBlock,
       variantBlockClone
     );
 
-    // adjust(variantBlockClone, contrast, brightness);
+    adjust(variantBlockClone, contrast, brightness);
 
     // // add contrast
     // mapBlock(variantBlockClone, (pixel) => pixel * contrast);
@@ -360,7 +431,7 @@ const createRandomBlock = (size: number): Block => {
   const block = createEmptyBlock(size);
   for (let x = 0; x < size; x++) {
     for (let y = 0; y < size; y++) {
-      block.data[x][y] = Math.floor(Math.random() * 256);
+      block.data[x][y] = Math.random();
     }
   }
   return block;
@@ -368,7 +439,7 @@ const createRandomBlock = (size: number): Block => {
 
 const decompress = (transformations: Transformation[][]): Block => {
   const size = transformations.length * DOMAIN_BLOCK_SIZE;
-  const currentImg = createEmptyBlock(size);
+  const currentImg = createRandomBlock(size);
 
   for (let i = 0; i < ITERATIONS; i++) {
     console.log("iteration", i);
@@ -410,9 +481,36 @@ const decompress = (transformations: Transformation[][]): Block => {
   return currentImg;
 };
 
+// (async () => {
+//   console.info("Loading image...");
+//   let { r, g, b } = await getRGBImage("../helena.jpg");
+
+//   console.info("Compressing image...");
+//   const transformations = {
+//     r: compress(r),
+//     g: compress(g),
+//     b: compress(b),
+//   };
+
+//   console.info("Decompressing image...");
+//   const decompressed = {
+//     r: decompress(transformations.r),
+//     g: decompress(transformations.g),
+//     b: decompress(transformations.b),
+//   };
+
+//   console.info("Saving decompressed image...");
+//   await saveRGBBlocksToImage(
+//     "10-iter.jpg",
+//     decompressed.r,
+//     decompressed.g,
+//     decompressed.b
+//   );
+// })();
+
 (async () => {
   console.info("Loading image...");
-  let block = await getGrayscaleImage("../lena.gif");
+  let block = await getGrayscaleImage("../monkey.gif");
   console.log("size", block.size);
 
   console.info("Compressing image...");
