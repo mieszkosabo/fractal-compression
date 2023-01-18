@@ -1,13 +1,20 @@
 import { createRandomBlock, extractBlock } from "./block";
-import { DOMAIN_BLOCK_SIZE, ITERATIONS, RANGE_BLOCK_SIZE } from "./constants";
+import {
+  DOMAIN_BLOCK_SIZE,
+  DEFAULT_ITERATIONS,
+  RANGE_BLOCK_SIZE,
+} from "./constants";
 import { applyTransformation, reduceSize } from "./transformations";
 import { Block, Transformation } from "./types";
 
-export const decompress = (transformations: Transformation[][]): Block => {
+export const decompress = (
+  transformations: Transformation[][],
+  iterations = DEFAULT_ITERATIONS
+): Block => {
   const size = transformations.length * DOMAIN_BLOCK_SIZE;
   const currentImg = createRandomBlock(size);
 
-  for (let i = 0; i < ITERATIONS; i++) {
+  for (let i = 0; i < DEFAULT_ITERATIONS; i++) {
     for (let k = 0; k < size; k += DOMAIN_BLOCK_SIZE) {
       for (let l = 0; l < size; l += DOMAIN_BLOCK_SIZE) {
         const { x, y, flipType, rotateAngle, contrast, brightness } =

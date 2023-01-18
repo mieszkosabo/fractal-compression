@@ -1,44 +1,68 @@
 import { compress } from "./compress";
 import { decompress } from "./decompress";
-import { getGrayscaleImage, saveBlockToImage } from "./image";
+import { getImage, saveBlocksToImage } from "./image";
+import { program } from "commander";
+import { readFileSync, writeFileSync } from "fs";
+import { Transformation } from "./types";
 
-// (async () => {
-//   console.info("Loading image...");
-//   let { r, g, b } = await getRGBImage("../helena.jpg");
+program
+  .name("ts-fc")
+  .description(
+    "A simple fractal compression CLI programm written in TypeScript"
+  )
+  .version("0.0.1");
 
-//   console.info("Compressing image...");
-//   const transformations = {
-//     r: compress(r),
-//     g: compress(g),
-//     b: compress(b),
-//   };
+program
+  .command("compress")
+  .requiredOption("-i, --input <path>", "path to the input image")
+  .requiredOption("-o, --output <path>", "path to the output image")
+  .action(async (options) => {
+    console.info("Loading image...");
+    let { r, g, b } = await getImage(options.input);
 
-//   console.info("Decompressing image...");
-//   const decompressed = {
-//     r: decompress(transformations.r),
-//     g: decompress(transformations.g),
-//     b: decompress(transformations.b),
-//   };
+    console.info("Compressing image...");
+    const transformations = {
+      r: compress(r),
+      g: compress(g),
+      b: compress(b),
+    };
 
-//   console.info("Saving decompressed image...");
-//   await saveRGBBlocksToImage(
-//     "10-iter.jpg",
-//     decompressed.r,
-//     decompressed.g,
-//     decompressed.b
-//   );
-// })();
+    writeFileSync(options.output, JSON.stringify(transformations));
+    console.info("Done");
+  });
 
-(async () => {
-  console.info("Loading image...");
-  let block = await getGrayscaleImage("../assets/monkey.gif");
+program
+  .command("decompress")
+  .requiredOption(
+    "-i, --input <path>",
+    "path to the file with the transformations"
+  )
+  .requiredOption("-o, --output <path>", "path to the output image")
+  .option("--iterations <number>", "number of iterations", "10")
+  .action(async (options) => {
+    console.info("Loading transformations file...");
+    const transformations = JSON.parse(
+      readFileSync(options.input, { encoding: "utf-8" })
+    ) as {
+      r: Transformation[][];
+      g: Transformation[][];
+      b: Transformation[][];
+    };
 
-  console.info("Compressing image...");
-  const transformations = compress(block);
+    console.info("Decompressing image...");
+    const decompressed = {
+      r: decompress(transformations.r, parseInt(options.iterations)),
+      g: decompress(transformations.g, parseInt(options.iterations)),
+      b: decompress(transformations.b, parseInt(options.iterations)),
+    };
 
-  console.info("Decompressing image...");
-  block = decompress(transformations);
+    console.info("Saving decompressed image...");
+    await saveBlocksToImage(
+      options.output,
+      decompressed.r,
+      decompressed.g,
+      decompressed.b
+    );
+  });
 
-  console.info("Saving decompressed image...");
-  await saveBlockToImage("reduced.gif", block);
-})();
+program.parse(process.argv);

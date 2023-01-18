@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "start": "ts-node main.ts",
+    "compress": "yarn start compress",
+    "decompress": "yarn start decompress"
+  },
   "devDependencies": {
     "@types/node": "^18.11.18",
     "@types/sharp": "^0.31.1",
@@ -10,6 +15,7 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
+    "commander": "^10.0.0",
     "sharp": "^0.31.3"
   }
 }

@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { createEmptyBlock } from "./block";
 import { Block } from "./types";
 
-function bufferToMatrix(array: Buffer, width: number): number[][] {
+const bufferToMatrix = (array: Buffer, width: number): number[][] => {
   const matrix = createEmptyBlock(width);
 
   for (let i = 0; i < array.length; i++) {
@@ -12,28 +12,15 @@ function bufferToMatrix(array: Buffer, width: number): number[][] {
   }
 
   return matrix.data;
-}
-
-export const getGrayscaleImage = async (path: string): Promise<Block> => {
-  const image = await sharp(path)
-    .grayscale()
-    .raw()
-    .resize(256, 256)
-    .toBuffer({ resolveWithObject: true });
-
-  const matrix = bufferToMatrix(image.data, image.info.width);
-
-  return {
-    data: matrix,
-    size: image.info.width,
-  };
 };
 
-function bufferToRGB(buffer: Buffer): {
+const bufferToRGB = (
+  buffer: Buffer
+): {
   r: Uint8Array;
   g: Uint8Array;
   b: Uint8Array;
-} {
+} => {
   const r = new Uint8Array(buffer.length / 3);
   const g = new Uint8Array(buffer.length / 3);
   const b = new Uint8Array(buffer.length / 3);
@@ -45,9 +32,9 @@ function bufferToRGB(buffer: Buffer): {
   }
 
   return { r, g, b };
-}
+};
 
-export const getRGBImage = async (
+export const getImage = async (
   path: string
 ): Promise<{ r: Block; g: Block; b: Block }> => {
   const image = await sharp(path)
@@ -67,7 +54,7 @@ export const getRGBImage = async (
   };
 };
 
-export const saveRGBBlocksToImage = async (
+export const saveBlocksToImage = async (
   path: string,
   r: Block,
   g: Block,
@@ -76,9 +63,10 @@ export const saveRGBBlocksToImage = async (
   const buffer = Buffer.alloc(r.size * r.size * 3);
   for (let i = 0; i < r.size; i++) {
     for (let j = 0; j < r.size; j++) {
-      buffer[i * r.size * 3 + j * 3] = r.data[i][j];
-      buffer[i * r.size * 3 + j * 3 + 1] = g.data[i][j];
-      buffer[i * r.size * 3 + j * 3 + 2] = b.data[i][j];
+      // we operate on values from 0 to 1 in this implementation, but sharp operates on values from 0 to 255
+      buffer[i * r.size * 3 + j * 3] = r.data[i][j] * 255;
+      buffer[i * r.size * 3 + j * 3 + 1] = g.data[i][j] * 255;
+      buffer[i * r.size * 3 + j * 3 + 2] = b.data[i][j] * 255;
     }
   }
 
@@ -87,21 +75,6 @@ export const saveRGBBlocksToImage = async (
       width: r.size,
       height: r.size,
       channels: 3,
-    },
-  }).toFile(path);
-};
-
-export const saveBlockToImage = async (
-  path: string,
-  block: Block
-): Promise<void> => {
-  // we operate on values from 0 to 1 in this implementation, but sharp operates on values from 0 to 255
-  const buffer = Buffer.from(block.data.flat().map((value) => value * 255));
-  await sharp(buffer, {
-    raw: {
-      width: block.size,
-      height: block.size,
-      channels: 1,
     },
   }).toFile(path);
 };
