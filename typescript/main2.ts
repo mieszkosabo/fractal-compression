@@ -234,10 +234,7 @@ const getContrastAndBrightness = (
       //   domain: domainBlock.data[x][y],
       //   range: rangeBlock.data[x][y],
       // });
-      brightness +=
-        domainBlock.data[x][y] -
-        (contrast * rangeBlock.data[x][y]) /
-          (domainBlock.size * domainBlock.size);
+      brightness += domainBlock.data[x][y] - contrast * rangeBlock.data[x][y];
     }
   }
 
@@ -425,7 +422,7 @@ const compress = (img: Block): Transformation[][] => {
   return transformations;
 };
 
-const ITERATIONS = 1;
+const ITERATIONS = 20;
 
 const createRandomBlock = (size: number): Block => {
   const block = createEmptyBlock(size);
