@@ -1,44 +1,26 @@
 import sharp from "sharp";
+import { createEmptyBlock } from "./block";
+import { Block } from "./types";
 
-// functions for image loading and saving
+const bufferToMatrix = (array: Buffer, width: number): number[][] => {
+  const matrix = createEmptyBlock(width);
 
-import { Image } from "./domain";
+  for (let i = 0; i < array.length; i++) {
+    const x = i % width;
+    const y = Math.floor(i / width);
+    matrix.data[y][x] = array[i] / 255;
+  }
 
-export const loadImage = async (path: string): Promise<Image> => {
-  const { data, info } = await sharp(path)
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
-  const { r, g, b } = bufferToRGB(data);
-  const rMatrix = uintArrayToMatrix(r, info.width);
-  const gMatrix = uintArrayToMatrix(g, info.width);
-  const bMatrix = uintArrayToMatrix(b, info.width);
-
-  return {
-    r: { data: rMatrix, size: info.width, coordinates: { x: 0, y: 0 } },
-    g: { data: gMatrix, size: info.width, coordinates: { x: 0, y: 0 } },
-    b: { data: bMatrix, size: info.width, coordinates: { x: 0, y: 0 } },
-    width: info.width,
-    height: info.height,
-  };
+  return matrix.data;
 };
 
-export const saveImage = async (path: string, image: Image): Promise<void> => {
-  const buffer = imageToBuffer(image);
-  await sharp(buffer, {
-    raw: {
-      width: image.width,
-      height: image.height,
-      channels: 3,
-    },
-  }).toFile(path);
-};
-
-function bufferToRGB(buffer: Buffer): {
+const bufferToRGB = (
+  buffer: Buffer
+): {
   r: Uint8Array;
   g: Uint8Array;
   b: Uint8Array;
-} {
+} => {
   const r = new Uint8Array(buffer.length / 3);
   const g = new Uint8Array(buffer.length / 3);
   const b = new Uint8Array(buffer.length / 3);
@@ -50,33 +32,49 @@ function bufferToRGB(buffer: Buffer): {
   }
 
   return { r, g, b };
-}
+};
 
-function uintArrayToMatrix(array: Uint8Array, width: number): number[][] {
-  const matrix = new Array(width);
-  for (let i = 0; i < width; i++) {
-    matrix[i] = new Array(width);
-  }
+export const getImage = async (
+  path: string
+): Promise<{ r: Block; g: Block; b: Block }> => {
+  const image = await sharp(path)
+    .raw()
+    .resize(256, 256)
+    .toBuffer({ resolveWithObject: true });
 
-  for (let i = 0; i < array.length; i++) {
-    const x = i % width;
-    const y = Math.floor(i / width);
-    matrix[x][y] = array[i];
-  }
+  const { r, g, b } = bufferToRGB(image.data);
+  const rMatrix = bufferToMatrix(Buffer.from(r), image.info.width);
+  const gMatrix = bufferToMatrix(Buffer.from(g), image.info.width);
+  const bMatrix = bufferToMatrix(Buffer.from(b), image.info.width);
 
-  return matrix;
-}
+  return {
+    r: { data: rMatrix, size: image.info.width },
+    g: { data: gMatrix, size: image.info.width },
+    b: { data: bMatrix, size: image.info.width },
+  };
+};
 
-function imageToBuffer(image: Image): Buffer {
-  const buffer = Buffer.alloc(image.width * image.height * 3);
-  for (let y = 0; y < image.height; y++) {
-    for (let x = 0; x < image.width; x++) {
-      const offset = y * image.width + x;
-      buffer[offset * 3] = image.r.data[x][y];
-      buffer[offset * 3 + 1] = image.g.data[x][y];
-      buffer[offset * 3 + 2] = image.b.data[x][y];
+export const saveBlocksToImage = async (
+  path: string,
+  r: Block,
+  g: Block,
+  b: Block
+): Promise<void> => {
+  const buffer = Buffer.alloc(r.size * r.size * 3);
+  for (let i = 0; i < r.size; i++) {
+    for (let j = 0; j < r.size; j++) {
+      // we operate on values from 0 to 1 in this implementation, but sharp operates on values from 0 to 255
+      buffer[i * r.size * 3 + j * 3] = r.data[i][j] * 255;
+      buffer[i * r.size * 3 + j * 3 + 1] = g.data[i][j] * 255;
+      buffer[i * r.size * 3 + j * 3 + 2] = b.data[i][j] * 255;
     }
   }
 
-  return buffer;
-}
+  await sharp(buffer, {
+    raw: {
+      width: r.size,
+      height: r.size,
+      channels: 3,
+    },
+  }).toFile(path);
+};
