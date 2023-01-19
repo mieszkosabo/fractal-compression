@@ -17,12 +17,13 @@ yarn
 ```
 
 ```bash
-yarn compress -i input.jpg -o compressed.json
+yarn compress -i ../assets/big-monkey.jpg -o compressed.json
 
-yarn decompress -i compressed.json -o output.jpg
+yarn decompress -i compressed.json -o decompressed.jpg --iterations 6
 ```
 
 ## TODOS
 
-- [ ] Encode the transformations to a binary file & decode it
 - [ ] Run the algorithm in parallel
+- [ ] Use a better method to calculate the contrast
+- [ ] Encode the transformations to a binary file & decode it

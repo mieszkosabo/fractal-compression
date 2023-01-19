@@ -10,3 +10,7 @@ In this repository I play around with implementing the fractal compression algor
 
 - [Blog post by pierre, 2018](https://pvigier.github.io/2018/05/14/fractal-image-compression.html) Apart from the explanation it also includes a python implementation.
 - [A serious implementation in pure JavaScript](https://github.com/heikkipora/js-fractal-compression)
+
+# Decompression vizualization
+
+![decompression.jpg](examples/decompression.jpg)
