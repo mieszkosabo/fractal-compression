@@ -49,7 +49,7 @@ program
       b: Transformation[][];
     };
 
-    console.info("Decompressing image...");
+    console.info(`Decompressing image with ${options.iterations}...`);
     const decompressed = {
       r: decompress(transformations.r, parseInt(options.iterations)),
       g: decompress(transformations.g, parseInt(options.iterations)),

@@ -14,7 +14,7 @@ export const decompress = (
   const size = transformations.length * DOMAIN_BLOCK_SIZE;
   const currentImg = createRandomBlock(size);
 
-  for (let i = 0; i < DEFAULT_ITERATIONS; i++) {
+  for (let i = 0; i < iterations; i++) {
     for (let k = 0; k < size; k += DOMAIN_BLOCK_SIZE) {
       for (let l = 0; l < size; l += DOMAIN_BLOCK_SIZE) {
         const { x, y, flipType, rotateAngle, contrast, brightness } =
